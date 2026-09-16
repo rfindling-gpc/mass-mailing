@@ -8,7 +8,7 @@ class ResPartner(models.Model):
     _inherit = "res.partner"
 
     def write(self, vals):
-        result = super().write(vals)
+        result = super().with_context(syncing=True).write(vals)
         mailing_vals = {}
 
         if "name" in vals:
