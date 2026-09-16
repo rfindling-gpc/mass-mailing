@@ -24,12 +24,17 @@ class ResPartner(models.Model):
             mailing_vals["country_id"] = vals["country_id"]
 
         if mailing_vals:
-            self.env["mailing.contact"].sudo().search(
-                [
-                    "|",
-                    ("partner_id", "in", self.ids),
-                    ("duplicated_partner_id", "in", self.ids),
-                ]
-            ).write(mailing_vals)
+            contacts = (
+                self.env["mailing.contact"]
+                .sudo()
+                .search(
+                    [
+                        "|",
+                        ("partner_id", "in", self.ids),
+                        ("duplicated_partner_id", "in", self.ids),
+                    ]
+                )
+            )
+            contacts.with_context(syncing=True).write(mailing_vals)
 
         return result

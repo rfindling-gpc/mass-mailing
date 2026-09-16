@@ -155,8 +155,11 @@ class DynamicListCase(BaseCommon):
         self.assertTrue(
             contact._has_partner_collision(self.partners[0], {self.list.id})
         )
+        unrelated_partner = self.env["res.partner"].create(
+            {"name": "Unrelated partner", "email": "unrelated@example.com"}
+        )
         self.assertFalse(
-            contact._has_partner_collision(self.partners[1], {self.list.id})
+            contact._has_partner_collision(unrelated_partner, {self.list.id})
         )
 
     def test_duplicate_contact_survives_full_sync(self):
