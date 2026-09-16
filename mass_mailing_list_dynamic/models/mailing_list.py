@@ -51,8 +51,7 @@ class MassMailingList(models.Model):
             if one.sync_method == "full":
                 final_contacts -= final_contacts.filtered(
                     lambda r, dp=desired_partners: (
-                        r.partner_id not in dp
-                        and r.duplicated_partner_id not in dp
+                        r.partner_id not in dp and r.duplicated_partner_id not in dp
                     )
                 )
             # Add new contacts
@@ -69,9 +68,7 @@ class MassMailingList(models.Model):
                 current_partner_ids.append(partner.id)
             detached = one.contact_ids - final_contacts
             one.contact_ids = final_contacts
-            detached.filtered(
-                lambda contact: not contact.list_ids
-            ).unlink()
+            detached.filtered(lambda contact: not contact.list_ids).unlink()
             one.is_synced = True
         # Invalidate cached contact count
         dynamic.invalidate_recordset(["contact_count"])

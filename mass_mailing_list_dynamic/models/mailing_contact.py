@@ -21,7 +21,7 @@ class MassMailingContact(models.Model):
 
     @api.depends("partner_id", "partner_id.category_id")
     def _compute_tag_ids(self):
-        super()._compute_tag_ids()
+        return super()._compute_tag_ids()
 
     @api.onchange("duplicated_partner_id")
     def _onchange_duplicated_partner_id(self):
@@ -31,9 +31,7 @@ class MassMailingContact(models.Model):
                 contact.name = partner.name
                 contact.email = partner.email
                 contact.title_id = partner.title
-                contact.company_name = (
-                    partner.company_id.name or partner.company_name
-                )
+                contact.company_name = partner.company_id.name or partner.company_name
                 contact.country_id = partner.country_id
 
     def _duplicate_partner_vals(self, partner):
@@ -45,35 +43,37 @@ class MassMailingContact(models.Model):
             "country_id": partner.country_id.id if partner.country_id else False,
         }
 
+    @staticmethod
+    def _get_list_ids_from_commands(commands):
+        target_lists = set()
+        for command in commands or []:
+            if not command:
+                continue
+            command_type = command[0]
+            if command_type == 6:
+                target_lists.update(command[2] or [])
+            elif command_type == 4:
+                target_lists.add(command[1])
+            elif command_type == 0:
+                list_id = command[2].get("list_id")
+                if list_id:
+                    target_lists.add(list_id)
+        return target_lists
+
+    @staticmethod
+    def _get_subscription_list_ids(commands):
+        return {
+            command[2]["list_id"]
+            for command in commands or []
+            if command and command[0] == 0 and command[2].get("list_id")
+        }
+
     def _get_target_list_ids(self, vals):
         """Return mailing lists affected by an upcoming create/write."""
-        target_lists = set()
-
-        list_commands = vals.get("list_ids")
-        if list_commands:
-            for command in list_commands:
-                if not command:
-                    continue
-                command_type = command[0]
-                if command_type == 6:
-                    target_lists.update(command[2] or [])
-                elif command_type == 4:
-                    target_lists.add(command[1])
-                elif command_type == 0:
-                    list_id = command[2].get("list_id")
-                    if list_id:
-                        target_lists.add(list_id)
-
-        subscription_commands = vals.get("subscription_ids")
-        if subscription_commands:
-            for command in subscription_commands:
-                if not command:
-                    continue
-                command_type = command[0]
-                if command_type == 0:
-                    list_id = command[2].get("list_id")
-                    if list_id:
-                        target_lists.add(list_id)
+        target_lists = self._get_list_ids_from_commands(vals.get("list_ids"))
+        target_lists.update(
+            self._get_subscription_list_ids(vals.get("subscription_ids"))
+        )
 
         if self.ids and "list_ids" not in vals:
             target_lists.update(self.list_ids.ids)
@@ -121,9 +121,7 @@ class MassMailingContact(models.Model):
 
     def write(self, vals):
         relevant = (
-            "partner_id" in vals
-            or "list_ids" in vals
-            or "subscription_ids" in vals
+            "partner_id" in vals or "list_ids" in vals or "subscription_ids" in vals
         )
         if not relevant:
             return super().write(vals)

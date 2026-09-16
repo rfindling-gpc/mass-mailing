@@ -43,8 +43,8 @@ class MailingSubscription(models.Model):
             )
 
             if matching_subscriptions:
-                matching_subscriptions.with_context(
-                    bypass_optout_sync=True
-                ).write({"opt_out": True})
+                matching_subscriptions.with_context(bypass_optout_sync=True).write(
+                    {"opt_out": True}
+                )
 
         return result
