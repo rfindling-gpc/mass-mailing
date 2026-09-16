@@ -143,6 +143,32 @@ class DynamicListCase(BaseCommon):
         # This shouldn't fail
         self.partners[:1].write({"email": "test_mass_mailing_list_dynamic@example.org"})
 
+    def test_partner_collision_detection(self):
+        self.list.action_sync()
+        contact = self.env["mailing.contact"].search(
+            [("list_ids", "in", self.list.ids), ("partner_id", "=", self.partners[0].id)],
+            limit=1,
+        )
+        self.assertTrue(contact._has_partner_collision(self.partners[0], {self.list.id}))
+        self.assertFalse(contact._has_partner_collision(self.partners[1], {self.list.id}))
+
+    def test_duplicate_contact_survives_full_sync(self):
+        self.list.action_sync()
+        duplicate = self.env["mailing.contact"].create(
+            {
+                "list_ids": [(4, self.list.id)],
+                "partner_id": self.partners[0].id,
+            }
+        )
+        self.assertFalse(duplicate.partner_id)
+        self.assertEqual(duplicate.duplicated_partner_id, self.partners[0])
+
+        self.list.sync_method = "full"
+        self.list.action_sync()
+
+        self.assertTrue(duplicate.exists())
+        self.assertIn(self.list, duplicate.list_ids)
+
     def test_is_synced(self):
         self.list.dynamic = False
         self.list._onchange_dynamic()
